@@ -144,36 +144,33 @@ create_git_tag() {
   echo "Created new git tag: v${next_version}"
 }
 
-# Generates a structured changelog documenting changes since the last versioned tag.
-# The changelog is formatted in Markdown and includes links to the GitHub repository.
-# This function relies on existing Git tags and commit messages to organize the changes.
 generate_structured_changelog() {
     local CHANGELOG_FILE="CHANGELOG.md"
     local TEMP_CHANGELOG_FILE="TEMP_CHANGELOG.md"
 
-    # Get the GitHub repository URL from GITHUB_REPOSITORY environment variable
+    # Get the GitHub repository URL from the GITHUB_REPOSITORY environment variable
     local REPO_URL="https://github.com/${GITHUB_REPOSITORY}"
 
-    # Get the latest and previous tags
-    local latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
-    local previous_tag=$(git describe --tags `git rev-list --tags --max-count=2` | sed -n '2p')
+    # Find the last tag. If there are no tags, assume all commits are new.
+    local latest_tag=$(get_last_tag)
+    local tag_date
+    local commits
 
-    # Initialize the temporary changelog file
+    # Prepare the temporary changelog file
     echo "# Changelog" > $TEMP_CHANGELOG_FILE
     echo "" >> $TEMP_CHANGELOG_FILE
     echo "All notable changes to this project will be documented in this file." >> $TEMP_CHANGELOG_FILE
     echo "" >> $TEMP_CHANGELOG_FILE
 
-    local tag_date=$(git log -1 --format=%ai $latest_tag | cut -d ' ' -f1)
-    echo "## [$latest_tag](${REPO_URL}/releases/tag/$latest_tag) - $tag_date" >> $TEMP_CHANGELOG_FILE
-    echo "" >> $TEMP_CHANGELOG_FILE
-
-    # Fetch commits between the latest and previous tags, or all if no previous tag
-    local commits
-    if [ -n "$previous_tag" ]; then
-        commits=$(git log $previous_tag..$latest_tag --pretty=format:"* %s" --reverse)
+    if [[ "$latest_tag" != "0.0.0" ]]; then
+        tag_date=$(git log -1 --format=%ai $latest_tag | cut -d ' ' -f1)
+        echo "## [$latest_tag](${REPO_URL}/releases/tag/$latest_tag) - $tag_date" >> $TEMP_CHANGELOG_FILE
+        echo "" >> $TEMP_CHANGELOG_FILE
+        commits=$(git log ${latest_tag}..HEAD --pretty=format:"* %s" --reverse)
     else
-        commits=$(git log $latest_tag --pretty=format:"* %s" --reverse)
+        echo "## Initial Release" >> $TEMP_CHANGELOG_FILE
+        echo "" >> $TEMP_CHANGELOG_FILE
+        commits=$(git log --pretty=format:"* %s" --reverse)
     fi
 
     if [ ! -z "$commits" ]; then
@@ -184,27 +181,23 @@ generate_structured_changelog() {
 
     echo "" >> $TEMP_CHANGELOG_FILE
 
-    # If an existing changelog file exists, append it to the temporary file
+    # If an existing changelog file exists, append it to the new one
     if [ -f "$CHANGELOG_FILE" ]; then
         cat $CHANGELOG_FILE >> $TEMP_CHANGELOG_FILE
     fi
 
-    # Replace the old CHANGELOG.md with the new one
+    # Replace the old changelog file with the new one
     mv $TEMP_CHANGELOG_FILE $CHANGELOG_FILE
 
-    cat $CHANGELOG_FILE
+    echo "Generated changelog for $latest_tag"
 }
 
-
-# Ensure GITHUB_REPOSITORY is available
+# Make sure the GITHUB_REPOSITORY environment variable is set before calling this function
 if [ -z "$GITHUB_REPOSITORY" ]; then
     echo "GITHUB_REPOSITORY environment variable is not set."
     exit 1
 fi
 
-# Extends `generate_structured_changelog` by also backing up the current changelog
-# before generating a new one. It tracks changes in Git, tags the new version, and optionally
-# updates the remote repository with these changes.
 generate_structured_changelog_and_backup() {
     local CHANGELOG_FILE="CHANGELOG.md"
     local BACKUP_FILE="CHANGELOG.md-back"
