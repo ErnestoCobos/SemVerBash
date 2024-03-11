@@ -241,8 +241,10 @@ generate_structured_changelog_and_backup() {
     # Commit the changes
     git commit -m "Update changelog for $new_version_tag"
 
+    # Calculating next version
+    next_version=$(calculate_next_version)
     # Tag the new version
-    git tag -a "$new_version_tag" -m "Release $new_version_tag"
+    git tag -a "$next_version" -m "Release $new_version_tag"
 
     # Push changes and tags
     git push origin "$current_branch"
