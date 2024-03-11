@@ -141,75 +141,52 @@ create_git_tag() {
 # Function to generate a formatted changelog since the last version
 generate_structured_changelog() {
     local CHANGELOG_FILE="CHANGELOG.md"
+    local TEMP_CHANGELOG_FILE="TEMP_CHANGELOG.md"
 
     # Get the GitHub repository URL from GITHUB_REPOSITORY environment variable
     local REPO_URL="https://github.com/${GITHUB_REPOSITORY}"
 
-    # Initialize or clear the changelog file
-    echo "# Change Log" > $CHANGELOG_FILE
-    echo "" >> $CHANGELOG_FILE
-    echo "All notable changes to this project will be documented in this file." >> $CHANGELOG_FILE
-    echo "" >> $CHANGELOG_FILE
+    # Get the latest and previous tags
+    local latest_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
+    local previous_tag=$(git describe --tags `git rev-list --tags --max-count=2` | sed -n '2p')
 
-    # Ensure git fetches the tags and sets them up correctly
-    git fetch --tags
+    # Initialize the temporary changelog file
+    echo "# Changelog" > $TEMP_CHANGELOG_FILE
+    echo "" >> $TEMP_CHANGELOG_FILE
+    echo "All notable changes to this project will be documented in this file." >> $TEMP_CHANGELOG_FILE
+    echo "" >> $TEMP_CHANGELOG_FILE
 
-    local previous_tag=""
-    local tags=$(git tag --sort=-version:refname)
-    for tag in $tags; do
-        local tag_date=$(git log -1 --format=%ai $tag | cut -d ' ' -f1)
-        echo "<a name=\"$tag\"></a>" >> $CHANGELOG_FILE
-        echo "## [$tag](${REPO_URL}/releases/tag/$tag) ($tag_date)" >> $CHANGELOG_FILE
-        echo "" >> $CHANGELOG_FILE
+    local tag_date=$(git log -1 --format=%ai $latest_tag | cut -d ' ' -f1)
+    echo "## [$latest_tag](${REPO_URL}/releases/tag/$latest_tag) - $tag_date" >> $TEMP_CHANGELOG_FILE
+    echo "" >> $TEMP_CHANGELOG_FILE
 
-        local commits
-        if [[ $previous_tag ]]; then
-            commits=$(git log $previous_tag..$tag --pretty=format:"%s" --reverse)
-        else
-            commits=$(git log $tag --pretty=format:"%s" --reverse)
-        fi
+    # Fetch commits between the latest and previous tags, or all if no previous tag
+    local commits
+    if [ -n "$previous_tag" ]; then
+        commits=$(git log $previous_tag..$latest_tag --pretty=format:"* %s" --reverse)
+    else
+        commits=$(git log $latest_tag --pretty=format:"* %s" --reverse)
+    fi
 
-        local FEATURES=""
-        local FIXES=""
-        local OTHERS=""
+    if [ ! -z "$commits" ]; then
+        echo "$commits" >> $TEMP_CHANGELOG_FILE
+    else
+        echo "* No significant changes." >> $TEMP_CHANGELOG_FILE
+    fi
 
-        while IFS= read -r commit; do
-            case "$commit" in
-                feat:* )
-                    FEATURES+="* $commit\n"
-                    ;;
-                fix:* )
-                    FIXES+="* $commit\n"
-                    ;;
-                * )
-                    OTHERS+="* $commit\n"
-                    ;;
-            esac
-        done <<< "$commits"
+    echo "" >> $TEMP_CHANGELOG_FILE
 
-        if [ ! -z "$FEATURES" ]; then
-            echo "### Features" >> $CHANGELOG_FILE
-            echo -e "$FEATURES" >> $CHANGELOG_FILE
-        fi
+    # If an existing changelog file exists, append it to the temporary file
+    if [ -f "$CHANGELOG_FILE" ]; then
+        cat $CHANGELOG_FILE >> $TEMP_CHANGELOG_FILE
+    fi
 
-        if [ ! -z "$FIXES" ]; then
-            echo "### Bug Fixes" >> $CHANGELOG_FILE
-            echo -e "$FIXES" >> $CHANGELOG_FILE
-        fi
+    # Replace the old CHANGELOG.md with the new one
+    mv $TEMP_CHANGELOG_FILE $CHANGELOG_FILE
 
-        if [ ! -z "$OTHERS" ]; then
-            echo "### Other" >> $CHANGELOG_FILE
-            echo -e "$OTHERS" >> $CHANGELOG_FILE
-        fi
-
-        echo "" >> $CHANGELOG_FILE
-
-        previous_tag=$tag
-    done
-
-    cat $CHANGELOG_FILE > temp.md && mv temp.md $CHANGELOG_FILE
     cat $CHANGELOG_FILE
 }
+
 
 # Ensure GITHUB_REPOSITORY is available
 if [ -z "$GITHUB_REPOSITORY" ]; then
@@ -250,11 +227,6 @@ generate_structured_changelog_and_backup() {
     git push origin "$current_branch"
     git push origin "$new_version_tag"
 }
-
-# Example usage
-commit_message="feat: add new feature"
-release_type=$(determine_release_type "$commit_message")
-echo "Commit message: '$commit_message' results in a release type of: $release_type"
 
 # Example usage
 next_version=$(calculate_next_version)
