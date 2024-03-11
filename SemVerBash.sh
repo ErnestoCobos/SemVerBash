@@ -42,7 +42,8 @@ determine_release_type() {
   echo "$release_type"
 }
 
-# Function to get the last tagged version that follows semantic versioning
+# Retrieves the last git tag that follows semantic versioning.
+# If no semantic versioning tags are found, defaults to "0.0.0".
 get_last_tag() {
   # Use git tag with a regex pattern to list tags that match semantic versioning
   local tags=$(git tag --list --sort=-v:refname 'v?[0-9]*.[0-9]*.[0-9]*')
@@ -59,7 +60,9 @@ get_last_tag() {
   fi
 }
 
-# Function to determine the version increment level based on commit messages
+# Determines the version increment level based on commit messages
+# from the last versioned tag to HEAD. Defaults to "patch", but can be adjusted
+# based on the types of releases found in the commit messages.
 determine_version_increment() {
   local last_tag=$(get_last_tag)
   local commits
@@ -88,7 +91,9 @@ determine_version_increment() {
 }
 
 
-# Function to calculate the next version
+# Calculates the next version based on the last versioned tag and the determined increment.
+# It updates version numbers according to semantic versioning rules and ensures
+# the new version does not already exist as a Git tag.
 calculate_next_version() {
     local last_version=$(get_last_tag | sed 's/^v//')  # Assuming tags are like v1.2.3
     if [[ $last_version == "" ]]; then
@@ -131,14 +136,17 @@ calculate_next_version() {
     echo "$new_version"
 }
 
-# Function to create a new git tag for the next version
+# Creates a new Git tag for the next version calculated by `calculate_next_version`.
+# It then prints a confirmation message with the new tag.
 create_git_tag() {
   local next_version=$(calculate_next_version)
   git tag -a "v${next_version}" -m "Release v${next_version}"
   echo "Created new git tag: v${next_version}"
 }
 
-# Function to generate a formatted changelog since the last version
+# Generates a structured changelog documenting changes since the last versioned tag.
+# The changelog is formatted in Markdown and includes links to the GitHub repository.
+# This function relies on existing Git tags and commit messages to organize the changes.
 generate_structured_changelog() {
     local CHANGELOG_FILE="CHANGELOG.md"
     local TEMP_CHANGELOG_FILE="TEMP_CHANGELOG.md"
@@ -194,6 +202,9 @@ if [ -z "$GITHUB_REPOSITORY" ]; then
     exit 1
 fi
 
+# Extends `generate_structured_changelog` by also backing up the current changelog
+# before generating a new one. It tracks changes in Git, tags the new version, and optionally
+# updates the remote repository with these changes.
 generate_structured_changelog_and_backup() {
     local CHANGELOG_FILE="CHANGELOG.md"
     local BACKUP_FILE="CHANGELOG.md-back"
