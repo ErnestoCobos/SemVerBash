@@ -127,6 +127,85 @@ create_git_tag() {
   echo "Created new git tag: v${next_version}"
 }
 
+# Function to generate a formatted changelog since the last version
+generate_structured_changelog() {
+    local CHANGELOG_FILE="CHANGELOG.md"
+
+    # Get the GitHub repository URL from GITHUB_REPOSITORY environment variable
+    local REPO_URL="https://github.com/${GITHUB_REPOSITORY}"
+
+    # Initialize or clear the changelog file
+    echo "# Change Log" > $CHANGELOG_FILE
+    echo "" >> $CHANGELOG_FILE
+    echo "All notable changes to this project will be documented in this file." >> $CHANGELOG_FILE
+    echo "" >> $CHANGELOG_FILE
+
+    # Ensure git fetches the tags and sets them up correctly
+    git fetch --tags
+
+    local previous_tag=""
+    local tags=$(git tag --sort=-version:refname)
+    for tag in $tags; do
+        local tag_date=$(git log -1 --format=%ai $tag | cut -d ' ' -f1)
+        echo "<a name=\"$tag\"></a>" >> $CHANGELOG_FILE
+        echo "## [$tag](${REPO_URL}/releases/tag/$tag) ($tag_date)" >> $CHANGELOG_FILE
+        echo "" >> $CHANGELOG_FILE
+
+        local commits
+        if [[ $previous_tag ]]; then
+            commits=$(git log $previous_tag..$tag --pretty=format:"%s" --reverse)
+        else
+            commits=$(git log $tag --pretty=format:"%s" --reverse)
+        fi
+
+        local FEATURES=""
+        local FIXES=""
+        local OTHERS=""
+
+        while IFS= read -r commit; do
+            case "$commit" in
+                feat:* )
+                    FEATURES+="* $commit\n"
+                    ;;
+                fix:* )
+                    FIXES+="* $commit\n"
+                    ;;
+                * )
+                    OTHERS+="* $commit\n"
+                    ;;
+            esac
+        done <<< "$commits"
+
+        if [ ! -z "$FEATURES" ]; then
+            echo "### Features" >> $CHANGELOG_FILE
+            echo -e "$FEATURES" >> $CHANGELOG_FILE
+        fi
+
+        if [ ! -z "$FIXES" ]; then
+            echo "### Bug Fixes" >> $CHANGELOG_FILE
+            echo -e "$FIXES" >> $CHANGELOG_FILE
+        fi
+
+        if [ ! -z "$OTHERS" ]; then
+            echo "### Other" >> $CHANGELOG_FILE
+            echo -e "$OTHERS" >> $CHANGELOG_FILE
+        fi
+
+        echo "" >> $CHANGELOG_FILE
+
+        previous_tag=$tag
+    done
+
+    tac $CHANGELOG_FILE > temp.md && mv temp.md $CHANGELOG_FILE
+    cat $CHANGELOG_FILE
+}
+
+# Ensure GITHUB_REPOSITORY is available
+if [ -z "$GITHUB_REPOSITORY" ]; then
+    echo "GITHUB_REPOSITORY environment variable is not set."
+    exit 1
+fi
+
 generate_structured_changelog_and_backup() {
     local CHANGELOG_FILE="CHANGELOG.md"
     local BACKUP_FILE="CHANGELOG.md-back"
@@ -159,12 +238,6 @@ generate_structured_changelog_and_backup() {
     git push origin "$new_version_tag"
 }
 
-# Ensure necessary environment variables are set
-if [ -z "$GITHUB_REPOSITORY" ]; then
-    echo "GITHUB_REPOSITORY environment variable is not set."
-    exit 1
-fi
-
 # Example usage
 commit_message="feat: add new feature"
 release_type=$(determine_release_type "$commit_message")
@@ -176,7 +249,4 @@ echo "Next version: $next_version"
 
 # Example usage
 next_version=$(calculate_next_version)
-create_git_tag
-
-# Call the function
 generate_structured_changelog_and_backup
