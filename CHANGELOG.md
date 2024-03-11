@@ -1,3 +1,11 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [v0.1.3](https://github.com/ErnestoCobos/SemVerBash/releases/tag/v0.1.3) - 2024-03-10
+
+* Update changelog for v0.1.2
+
 # Change Log
 
 All notable changes to this project will be documented in this file.
