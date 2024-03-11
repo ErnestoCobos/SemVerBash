@@ -2,8 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-<a name="v0.1.1"></a>
-## [v0.1.1](https://github.com/ErnestoCobos/SemVerBash/releases/tag/v0.1.1) (2024-03-10)
+<a name="v0.1.2"></a>
+## [v0.1.2](https://github.com/ErnestoCobos/SemVerBash/releases/tag/v0.1.2) (2024-03-10)
 
 ### Features
 * feat: Add changelog generation and git tagging scripts
@@ -19,6 +19,14 @@ All notable changes to this project will be documented in this file.
 * Add semantic versioning script
 * Add changelog generation and git tagging scripts
 * Update changelog for v0.1.0
+* Update changelog for v0.1.1
+
+
+<a name="v0.1.1"></a>
+## [v0.1.1](https://github.com/ErnestoCobos/SemVerBash/releases/tag/v0.1.1) (2024-03-10)
+
+### Other
+* 
 
 
 <a name="v0.1.0"></a>
