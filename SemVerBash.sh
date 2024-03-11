@@ -90,34 +90,45 @@ determine_version_increment() {
 
 # Function to calculate the next version
 calculate_next_version() {
-  local increment=$(determine_version_increment)
-  local last_version=$(get_last_tag)
-  
-  # Assuming 0.0.0 if no last version is found
-  if [[ -z "$last_version" ]]; then
-    last_version="0.0.0"
-  fi
+    local last_version=$(get_last_tag | sed 's/^v//')  # Assuming tags are like v1.2.3
+    if [[ $last_version == "" ]]; then
+        last_version="0.0.0"
+    fi
 
-  local major=$(echo $last_version | cut -d '.' -f1)
-  local minor=$(echo $last_version | cut -d '.' -f2)
-  local patch=$(echo $last_version | cut -d '.' -f3)
+    local increment=$(determine_version_increment)
+    IFS='.' read -r -a version_parts <<< "$last_version"
+    local major=${version_parts[0]}
+    local minor=${version_parts[1]}
+    local patch=${version_parts[2]}
 
-  case "$increment" in
-    "major")
-      major=$((major + 1))
-      minor=0
-      patch=0
-      ;;
-    "minor")
-      minor=$((minor + 1))
-      patch=0
-      ;;
-    "patch")
-      patch=$((patch + 1))
-      ;;
-  esac
+    case "$increment" in
+        "major")
+            major=$((major + 1))
+            minor=0
+            patch=0
+            ;;
+        "minor")
+            minor=$((minor + 1))
+            patch=0
+            ;;
+        "patch")
+            patch=$((patch + 1))
+            ;;
+        *)
+            # If no increment is needed, we will still bump the patch to avoid tag conflicts.
+            patch=$((patch + 1))
+            ;;
+    esac
 
-  echo "${major}.${minor}.${patch}"
+    local new_version="v${major}.${minor}.${patch}"
+
+    # Check if the calculated version tag already exists and increment the patch number until it doesn't.
+    while git rev-parse "$new_version" >/dev/null 2>&1; do
+        patch=$((patch + 1))
+        new_version="v${major}.${minor}.${patch}"
+    done
+
+    echo "$new_version"
 }
 
 # Function to create a new git tag for the next version
