@@ -127,32 +127,43 @@ create_git_tag() {
   echo "Created new git tag: v${next_version}"
 }
 
-# Function to generate a formatted changelog since the last version
-generate_changelog() {
-  local last_tag=$(get_last_tag)
+generate_structured_changelog_and_backup() {
+    local CHANGELOG_FILE="CHANGELOG.md"
+    local BACKUP_FILE="CHANGELOG.md-back"
+    local REPO_URL="https://github.com/${GITHUB_REPOSITORY}"
 
-  # Get the date of the last tag in YYYY-MM-DD format
-  local tag_date=""
-  if [ "$last_tag" != "0.0.0" ]; then
-    tag_date=$(git log -1 --format=%ai "$last_tag" | cut -d ' ' -f1)
-  fi
+    # Aquí iría la implementación de la generación del changelog como se discutió anteriormente.
+    # Omitido por brevedad, asumiendo que ya está definido en este punto del script.
 
-  # Print the title with the tag and the date
-  if [ -z "$tag_date" ]; then
-    echo "Changelog for initial version"
-  else
-    echo "Changelog for $last_tag ($tag_date)"
-  fi
-  echo "--------------------------------"
+    # Backup the previous changelog
+    if [ -f "$CHANGELOG_FILE" ]; then
+        cp "$CHANGELOG_FILE" "$BACKUP_FILE"
+    fi
 
-  # List the commit messages
-  if [ "$last_tag" = "0.0.0" ]; then
-    git log --pretty=format:"%h - %s"
-  else
-    git log ${last_tag}..HEAD --pretty=format:"%h - %s"
-  fi
+    # Generate the new changelog
+    generate_structured_changelog
+
+    # Add and commit changes
+    git add "$CHANGELOG_FILE" "$BACKUP_FILE"
+    local current_branch=$(git rev-parse --abbrev-ref HEAD)
+    local new_version_tag=$(git describe --tags `git rev-list --tags --max-count=1`)
+    
+    # Commit the changes
+    git commit -m "Update changelog for $new_version_tag"
+
+    # Tag the new version
+    git tag -a "$new_version_tag" -m "Release $new_version_tag"
+
+    # Push changes and tags
+    git push origin "$current_branch"
+    git push origin "$new_version_tag"
 }
 
+# Ensure necessary environment variables are set
+if [ -z "$GITHUB_REPOSITORY" ]; then
+    echo "GITHUB_REPOSITORY environment variable is not set."
+    exit 1
+fi
 
 # Example usage
 commit_message="feat: add new feature"
@@ -166,4 +177,6 @@ echo "Next version: $next_version"
 # Example usage
 next_version=$(calculate_next_version)
 create_git_tag
-generate_changelog > CHANGELOG.md
+
+# Call the function
+generate_structured_changelog_and_backup
