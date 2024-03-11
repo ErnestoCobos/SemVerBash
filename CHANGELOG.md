@@ -20,6 +20,31 @@ All notable changes to this project will be documented in this file.
 * fix: Refactor versioning functions and add backup feature
 * Update changelog for v0.1.4
 * fix: Refactor changelog generation and backup
+* Update changelog for v0.1.5
+* feat: added Readme
+
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## Initial Release
+
+* Add semantic versioning script
+* Add changelog generation and git tagging scripts
+* feat: Add changelog generation and git tagging scripts
+* fix: Update changelog and generate structured changelog
+* Update changelog for v0.1.0
+* feat: Add structured changelog generation function
+* fix: typo in generate_structured_changelog function
+* fix: Refactor version calculation logic in SemVerBash.sh
+* fix: Update changelog and tag new version
+* Update changelog for v0.1.1
+* Update changelog for v0.1.2
+* fix: Refactor changelog generation logic
+* Update changelog for v0.1.3
+* fix: Refactor versioning functions and add backup feature
+* Update changelog for v0.1.4
+* fix: Refactor changelog generation and backup
 
 # Changelog
 
