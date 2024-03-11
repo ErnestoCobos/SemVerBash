@@ -196,7 +196,7 @@ generate_structured_changelog() {
         previous_tag=$tag
     done
 
-    tac $CHANGELOG_FILE > temp.md && mv temp.md $CHANGELOG_FILE
+    cat $CHANGELOG_FILE > temp.md && mv temp.md $CHANGELOG_FILE
     cat $CHANGELOG_FILE
 }
 
