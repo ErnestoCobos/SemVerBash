@@ -120,6 +120,40 @@ calculate_next_version() {
   echo "${major}.${minor}.${patch}"
 }
 
+# Function to create a new git tag for the next version
+create_git_tag() {
+  local next_version=$(calculate_next_version)
+  git tag -a "v${next_version}" -m "Release v${next_version}"
+  echo "Created new git tag: v${next_version}"
+}
+
+# Function to generate a formatted changelog since the last version
+generate_changelog() {
+  local last_tag=$(get_last_tag)
+
+  # Get the date of the last tag in YYYY-MM-DD format
+  local tag_date=""
+  if [ "$last_tag" != "0.0.0" ]; then
+    tag_date=$(git log -1 --format=%ai "$last_tag" | cut -d ' ' -f1)
+  fi
+
+  # Print the title with the tag and the date
+  if [ -z "$tag_date" ]; then
+    echo "Changelog for initial version"
+  else
+    echo "Changelog for $last_tag ($tag_date)"
+  fi
+  echo "--------------------------------"
+
+  # List the commit messages
+  if [ "$last_tag" = "0.0.0" ]; then
+    git log --pretty=format:"%h - %s"
+  else
+    git log ${last_tag}..HEAD --pretty=format:"%h - %s"
+  fi
+}
+
+
 # Example usage
 commit_message="feat: add new feature"
 release_type=$(determine_release_type "$commit_message")
@@ -128,3 +162,8 @@ echo "Commit message: '$commit_message' results in a release type of: $release_t
 # Example usage
 next_version=$(calculate_next_version)
 echo "Next version: $next_version"
+
+# Example usage
+next_version=$(calculate_next_version)
+create_git_tag
+generate_changelog > CHANGELOG.md
